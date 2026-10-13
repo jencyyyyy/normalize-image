@@ -1,14 +1,10 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request
 from PIL import Image
 import numpy as np
-import os
-import uuid
+import io
+import base64
 
 app = Flask(__name__)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROCESSED_FOLDER = os.path.join(BASE_DIR, "processed")
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tif", "tiff", "gif"}
 
@@ -61,26 +57,22 @@ def index():
 
         normalized = normalize_image(image)
 
-        filename = f"{uuid.uuid4().hex}.png"
-        output_path = os.path.join(PROCESSED_FOLDER, filename)
-        normalized.save(output_path, format="PNG")
+        # Encode directly to base64 in memory - no disk writes.
+        # Required on serverless platforms like Vercel, where the filesystem
+        # is read-only/ephemeral and a saved file may not exist by the time
+        # a later request (possibly hitting a different instance) asks for it.
+        buffer = io.BytesIO()
+        normalized.save(buffer, format="PNG")
+        buffer.seek(0)
+        encoded = base64.b64encode(buffer.read()).decode("utf-8")
+        data_uri = f"data:image/png;base64,{encoded}"
 
-        return render_template("index.html", result_image=filename)
+        return render_template("index.html", result_image=data_uri)
 
     return render_template("index.html")
 
 
-@app.route("/processed/<filename>")
-def processed_file(filename):
-    path = os.path.join(PROCESSED_FOLDER, filename)
-    return send_file(path, mimetype="image/png")
-
-
-@app.route("/download/<filename>")
-def download(filename):
-    path = os.path.join(PROCESSED_FOLDER, filename)
-    return send_file(path, as_attachment=True, download_name=f"normalized_{filename}")
-
-
+# Vercel's Python runtime imports this file and looks for a WSGI app object
+# named "app" - no app.run() call is needed or used in that environment.
 if __name__ == "__main__":
     app.run(debug=True)

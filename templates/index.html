@@ -48,7 +48,7 @@
     padding: 28px;
     margin-bottom: 24px;
   }
- 
+
   .dropzone:hover {
     border-color: var(--accent);
   }
@@ -136,8 +136,8 @@
   {% if result_image %}
   <div class="card result">
     <h2 style="margin-top:0;">Result</h2>
-    <img src="{{ url_for('processed_file', filename=result_image) }}" alt="Normalized image">
-    <a class="download-btn" href="{{ url_for('download', filename=result_image) }}">Download Normalized Image</a>
+    <img src="{{ result_image }}" alt="Normalized image">
+    <a class="download-btn" href="{{ result_image }}" download="normalized.png">Download Normalized Image</a>
   </div>
   {% endif %}
 </div>
